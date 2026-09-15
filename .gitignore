@@ -1,3 +1,7 @@
+# OS Generated Files
+.DS_Store
+Thumbs.db
+
 # Environments & Secret Files
 .env
 .env.local
@@ -43,6 +47,9 @@ coverage.xml
 
 # TransitPulse Local Data & Storage
 data/
+data/sample/
+data/raw/
+data/processed/
 data/raw_landing/
 data/delta_warehouse/
 data/static_gtfs/

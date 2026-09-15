@@ -1,8 +1,6 @@
-version: '3.8'
-
 services:
   postgres:
-    image: postgres:15-alpine
+    image: postgres:14-alpine
     container_name: transitpulse-postgres
     environment:
       POSTGRES_DB: transitpulse
@@ -18,43 +16,74 @@ services:
       timeout: 5s
       retries: 5
 
-  minio:
-    image: minio/minio:RELEASE.2024-01-31T02-03-43Z
-    container_name: transitpulse-minio
-    environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
-    command: server /data --console-address ":9001"
+  localstack:
+    image: localstack/localstack:latest
+    container_name: transitpulse-localstack
     ports:
-      - "9000:9000"
-      - "9001:9001"
-    volumes:
-      - minio_data:/data
-
-  spark-master:
-    image: bitnami/spark:3.5.0
-    container_name: transitpulse-spark-master
+      - "4566:4566"            # LocalStack Gateway
     environment:
-      - SPARK_MODE=master
-      - SPARK_RPC_AUTHENTICATION_ENABLED=no
-      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SERVICES=s3
+      - AWS_DEFAULT_REGION=us-east-1
+    volumes:
+      - localstack_data:/var/lib/localstack
+
+  airflow-postgres:
+    image: postgres:14-alpine
+    container_name: transitpulse-airflow-postgres
+    environment:
+      POSTGRES_DB: airflow
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow_password
+    volumes:
+      - airflow_postgres_data:/var/lib/postgresql/data
+
+  airflow-webserver:
+    image: apache/airflow:2.8.1-python3.11
+    container_name: transitpulse-airflow-webserver
+    restart: always
+    depends_on:
+      - airflow-postgres
+    environment:
+      - AIRFLOW__CORE__DATABASE_CONNECTOR=postgresql+psycopg2
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow_password@airflow-postgres:5432/airflow
+      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
     ports:
       - "8080:8080"
-      - "7077:7077"
+    command: webserver
 
-  spark-worker:
-    image: bitnami/spark:3.5.0
-    container_name: transitpulse-spark-worker
-    environment:
-      - SPARK_MODE=worker
-      - SPARK_MASTER_URL=spark://spark-master:7077
-      - SPARK_WORKER_MEMORY=2G
-      - SPARK_WORKER_CORES=2
-      - SPARK_RPC_AUTHENTICATION_ENABLED=no
-      - SPARK_RPC_ENCRYPTION_ENABLED=no
+  airflow-scheduler:
+    image: apache/airflow:2.8.1-python3.11
+    container_name: transitpulse-airflow-scheduler
+    restart: always
     depends_on:
-      - spark-master
+      - airflow-webserver
+    environment:
+      - AIRFLOW__CORE__DATABASE_CONNECTOR=postgresql+psycopg2
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow_password@airflow-postgres:5432/airflow
+      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+    command: scheduler
+
+  jupyter:
+    image: jupyter/pyspark-notebook:latest
+    container_name: transitpulse-jupyter
+    ports:
+      - "8888:8888"
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+    volumes:
+      - .:/home/jovyan/work
 
 volumes:
   postgres_data:
-  minio_data:
+  localstack_data:
+  airflow_postgres_data:
