@@ -1,0 +1,61 @@
+# Environments & Secret Files
+.env
+.env.local
+.env.*.local
+
+# Python & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+
+# IDEs & Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# TransitPulse Local Data & Storage
+data/
+data/raw_landing/
+data/delta_warehouse/
+data/static_gtfs/
+*.parquet
+*.delta
+*.pb
+*.protobuf
+*.zip
+spark-warehouse/
+metastore_db/
+derby.log
+
+# dbt Artifacts
+target/
+dbt_packages/
+logs/
